@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-const API = 'http://localhost:5000';
+const API = process.env.REACT_APP_API_URL || '';
 
 const statusColor = s => ({success:"#00e676",running:"#40c4ff",failed:"#ff5252",warning:"#ffd740",queued:"#78909c",pending:"#546e7a"})[s]||"#aaa";
 const levelCol = l => ({INFO:"#40c4ff",WARN:"#ffd740",ERROR:"#ff5252",DEBUG:"#78909c"})[l]||"#aaa";
@@ -113,7 +113,7 @@ export default function App() {
       {/* HEADER */}
       <div style={{background:"#0d1117",borderBottom:"1px solid #1e2a3a",padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#0d47a1,#40c4ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>&#9881;</div>
+          <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#0d47a1,#40c4ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⚙</div>
           <div>
             <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:16,color:"#e3f2fd"}}>DeployFlow</div>
             <div style={{fontSize:10,color:"#546e7a"}}>CI/CD Automation Platform v2.4.1</div>
@@ -130,9 +130,9 @@ export default function App() {
         <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,padding:"14px 24px"}}>
           {[
             {label:"Total Builds",val:stats.totalBuilds.toLocaleString(),sub:"+23 today",c:"#40c4ff"},
-            {label:"Success Rate",val:stats.successRate+"%",sub:"\u2191 1.3%",c:"#00e676"},
+            {label:"Success Rate",val:stats.successRate+"%",sub:"↑ 1.3%",c:"#00e676"},
             {label:"Containers",val:stats.activeContainers,sub:stats.services+" services",c:"#7c4dff"},
-            {label:"Avg Deploy",val:stats.avgDeployTime,sub:"\u2193 12s",c:"#ffd740"},
+            {label:"Avg Deploy",val:stats.avgDeployTime,sub:"↓ 12s",c:"#ffd740"},
             {label:"Uptime",val:stats.uptime,sub:"30 days",c:"#00e676"},
           ].map((s,i)=>(
             <div key={i} className="card" style={{animation:`slideUp .3s ease ${i*.06}s both`}}>
@@ -151,6 +151,7 @@ export default function App() {
 
       <div style={{padding:"16px 24px"}}>
 
+        {/* PIPELINES */}
         {tab==="pipelines" && (
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -164,7 +165,7 @@ export default function App() {
                     <div style={{width:8,height:8,borderRadius:"50%",background:statusColor(p.status),flexShrink:0,animation:p.status==="running"?"pulse 1.5s infinite":"none"}}/>
                     <div>
                       <div style={{fontWeight:600,color:"#e3f2fd"}}>{p.name}</div>
-                      <div style={{fontSize:11,color:"#546e7a",marginTop:2}}>{p.repo} &bull; {p.branch} &bull; {p.commit}</div>
+                      <div style={{fontSize:11,color:"#546e7a",marginTop:2}}>{p.repo} • {p.branch} • {p.commit}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:16}}>
@@ -187,6 +188,7 @@ export default function App() {
           </div>
         )}
 
+        {/* CONTAINERS */}
         {tab==="containers" && (
           <div>
             <div style={{fontSize:11,color:"#78909c",marginBottom:14}}>Docker containers across 3 nodes</div>
@@ -221,6 +223,7 @@ export default function App() {
           </div>
         )}
 
+        {/* MONITORING */}
         {tab==="monitoring" && metrics && (
           <div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
@@ -251,6 +254,7 @@ export default function App() {
           </div>
         )}
 
+        {/* LOGS */}
         {tab==="logs" && (
           <div className="card" style={{padding:0,overflow:"hidden"}}>
             <div style={{padding:"10px 16px",borderBottom:"1px solid #1e2a3a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -274,15 +278,16 @@ export default function App() {
         )}
       </div>
 
+      {/* PIPELINE DETAIL MODAL */}
       {selectedPipeline && (
         <div className="modal-overlay" onClick={()=>setSelectedPipeline(null)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
               <div>
                 <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color:"#e3f2fd"}}>{selectedPipeline.name}</div>
-                <div style={{fontSize:11,color:"#546e7a",marginTop:4}}>{selectedPipeline.repo} &bull; {selectedPipeline.branch}</div>
+                <div style={{fontSize:11,color:"#546e7a",marginTop:4}}>{selectedPipeline.repo} • {selectedPipeline.branch}</div>
               </div>
-              <button className="btn" onClick={()=>setSelectedPipeline(null)} style={{padding:"4px 10px",fontSize:16}}>&times;</button>
+              <button className="btn" onClick={()=>setSelectedPipeline(null)} style={{padding:"4px 10px",fontSize:16}}>✕</button>
             </div>
             <div style={{display:"flex",gap:6,marginBottom:20}}>
               {selectedPipeline.stages.map((s,i)=>(
@@ -304,13 +309,14 @@ export default function App() {
               ))}
             </div>
             <div style={{marginTop:16,display:"flex",gap:8}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={()=>handleRerun(selectedPipeline.id)}>&#8635; Re-run Pipeline</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>handleRerun(selectedPipeline.id)}>↻ Re-run Pipeline</button>
               <button className="btn" style={{flex:1}} onClick={()=>{setSelectedPipeline(null);setTab('logs')}}>View Logs</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* NEW PIPELINE MODAL */}
       {showDeploy && (
         <div className="modal-overlay" onClick={()=>setShowDeploy(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
@@ -322,7 +328,7 @@ export default function App() {
               </div>
             ))}
             <div style={{display:"flex",gap:8,marginTop:8}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={handleCreatePipeline}>Create &amp; Run Pipeline</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={handleCreatePipeline}>Create & Run Pipeline</button>
               <button className="btn" onClick={()=>setShowDeploy(false)}>Cancel</button>
             </div>
           </div>

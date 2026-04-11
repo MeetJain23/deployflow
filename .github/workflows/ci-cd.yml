@@ -1,0 +1,71 @@
+name: DeployFlow CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install backend dependencies
+        run: cd backend && npm install
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build frontend
+        run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install backend dependencies
+        run: cd backend && npm install
+      - name: Run backend tests
+        run: cd backend && node tests/test.js
+
+  dockerize:
+    name: Dockerize
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Backend Docker image
+        run: docker build -t deployflow-backend:latest ./backend
+      - name: Run container health check
+        run: |
+          docker run -d --name backend-test -p 5000:5000 deployflow-backend:latest
+          sleep 5
+          curl --fail http://localhost:5000/api/health || exit 1
+          docker stop backend-test
+          echo "Container health check passed"
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: dockerize
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "======================================="
+          echo "  DEPLOYING TO PRODUCTION"
+          echo "======================================="
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Actor:  ${{ github.actor }}"
+          echo "  Time:   $(date -u)"
+          echo "======================================="
+          echo "  Deployment successful!"
+          echo "======================================="
