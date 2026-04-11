@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GITHUB_REPO = 'MeetJain23/deployflow';
 
 app.use(cors());
