@@ -3,9 +3,8 @@ name: DeployFlow CI/CD Pipeline
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-
+  repository_dispatch:
+    types: [pipeline_trigger]
 jobs:
   build:
     name: Build

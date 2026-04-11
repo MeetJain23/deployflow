@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
+const GITHUB_TOKEN = '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';
+const GITHUB_REPO = 'MeetJain23/deployflow';
 
 app.use(cors());
 app.use(express.json());
@@ -63,10 +65,10 @@ app.get('/api/pipelines/:id', (req, res) => {
   res.json(p);
 });
 
-app.post('/api/pipelines', (req, res) => {
+app.post('/api/pipelines', async (req, res) => {
   const { name, repo, branch, dockerfilePath, deployTarget } = req.body;
   const np = {
-    id:`PL-${String(pipelines.length+1).padStart(3,'0')}`,
+    id:'PL-' + String(pipelines.length+1).padStart(3,'0'),
     name:name||'new-service', repo:repo||'github.com/team/new-service', branch:branch||'main',
     status:'queued', duration:'-', triggered:new Date().toISOString(),
     stages:[{name:"Build",status:"pending",duration:"-"},{name:"Test",status:"pending",duration:"-"},{name:"Dockerize",status:"pending",duration:"-"},{name:"Deploy",status:"pending",duration:"-"}],
@@ -74,19 +76,16 @@ app.post('/api/pipelines', (req, res) => {
   };
   pipelines.push(np);
   simulatePipeline(np);
+  try {
+    const response = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/dispatches', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'pipeline_trigger', client_payload: { pipeline_name: name || 'new-service' } })
+    });
+    console.log('GitHub Actions triggered! Status:', response.status);
+  } catch(e) { console.log('GitHub trigger failed:', e.message); }
   res.status(201).json(np);
 });
-
-app.post('/api/pipelines/:id/rerun', (req, res) => {
-  const p = pipelines.find(p => p.id === req.params.id);
-  if (!p) return res.status(404).json({ error:'Pipeline not found' });
-  p.status = 'queued';
-  p.triggered = new Date().toISOString();
-  p.stages.forEach(s => { s.status='pending'; s.duration='-'; });
-  simulatePipeline(p);
-  res.json(p);
-});
-
 // Containers
 app.get('/api/containers', (req, res) => {
   const live = containers.map(c => ({
